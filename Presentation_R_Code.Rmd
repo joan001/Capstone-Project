@@ -1,0 +1,206 @@
+---
+title: "Capstone for CRUG"
+output: slidy_presentation
+---
+---
+
+
+## Major Issue in Using Unsupervised Learning
+
+
+### Assess the Clustering Tendency
+
+
+```{r,warning=FALSE, message=FALSE}
+library(MASS)
+library(fitdistrplus)
+library(ggplot2)
+library(mclust)
+library(cluster)
+library(clustertend)
+```
+
+
+### Data preparation
+
+```{r}
+f.t.debt.ratio = read.csv(file="C:/Temp/Debt/External_Total_Data.csv", header=TRUE, sep=",") 
+#head(f.t.debt.ratio)
+# apply log on each columns to normlize data
+f.t.df = as.data.frame(round(apply(f.t.debt.ratio, 2, log), 2))
+
+set.seed(123)
+hopkins(f.t.df, n = nrow(f.t.df)-1)
+```
+
+---
+
+### An illustration of the dataset on two dimension 
+
+
+```{r}
+
+ggplot(f.t.df, aes(x=F.Debt.Ratio , y=T.Debt.Ratio)) + geom_point() +geom_density2d() 
+```
+
+
+---
+
+## Choose right model
+
+```{r}
+f.t.clust  = Mclust(f.t.df)
+plot(f.t.clust)
+f.t.clust$G
+f.t.clust.num = f.t.clust$classification
+#write.csv(f.t.clust.num, file="C:/Temp/Debt/log.f.t.clust.num.csv")
+```
+
+
+---
+
+## Check distribution
+
+###Check distribution for each clusted group
+
+1.  Check distribution for cluster 1 group
+
+### Check distribution for external debt ratio
+```{r}
+clusted.f.t.df = read.csv(file="C:/Temp/Debt/Clusted.f.t.df.csv", header=TRUE, sep=",")
+#head(clusted.f.t.df)
+attach(clusted.f.t.df)
+#Check on external Debt ratio of cluster 1
+descdist(F.Debt.Ratio[1:75], discrete = FALSE, boot=1000)
+
+# looks like distribuion is close to normal
+#Check normal- accept normal 
+norm.fit = fitdist(F.Debt.Ratio[1:75], "norm")
+ks.norm= ks.test(F.Debt.Ratio[1:75], "pnorm", mean=norm.fit$estimate[1], sd=norm.fit$estimate[2])
+c(ks.norm$statistic, P.Value=ks.norm$p.value)
+
+```
+
+
+---
+
+### Check distribution for total debt ratio
+```{r}
+#Check on total debt ratio of cluster 1
+descdist(T.Debt.Ratio[1:75], discrete = FALSE, boot=1000)
+
+# looks like distribuion is close to normal
+#Check normal- accept normal 
+norm.fit = fitdist(T.Debt.Ratio[1:75], "norm")
+ks.norm= ks.test(T.Debt.Ratio[1:75], "pnorm", mean=norm.fit$estimate[1], sd=norm.fit$estimate[2])
+c(ks.norm$statistic, P.Value=ks.norm$p.value)
+```
+
+
+---
+
+
+## Check relationship between external debt ratio and total debt ratio
+
+
+### Check relationshop between external debt ratio and total debt ratio in cluster 1 group
+
+
+```{r}
+x1 = F.Debt.Ratio[1:75]
+y1 = T.Debt.Ratio[1:75]
+z1 = T.Debt.Ratio[1:75]-F.Debt.Ratio[1:75]
+plot(x1, y1, xlab="External Debt Ratio", ylab ="Total Debt Ratio", col='blue')
+#check rank
+plot(rank(x1), rank(y1)) 
+```
+
+---
+
+2. Check distributon on cluster 2 group 
+
+```{r}
+#Check on external Debt ratio of cluster 2
+descdist(F.Debt.Ratio[76:88], discrete = FALSE, boot=1000)
+
+# looks like distribuion is close to uniform or normal
+ks.test(F.Debt.Ratio[76:88],"punif",-1,1) #uniform is rejected
+
+#Check normal- accept normal 
+norm.fit = fitdist(F.Debt.Ratio[76:88], "norm")
+ks.norm= ks.test(F.Debt.Ratio[76:88], "pnorm", mean=norm.fit$estimate[1], sd=norm.fit$estimate[2])
+c(ks.norm$statistic, P.Value=ks.norm$p.value)
+
+#Check on total debt ratio of cluster 2
+descdist(T.Debt.Ratio[76:88], discrete = FALSE, boot=1000)
+
+# looks like distribuion is close to uniform or normal
+ks.test(T.Debt.Ratio[76:88],"punif",-1,1) #uniform is rejected
+#Check normal- accept normal 
+norm.fit = fitdist(T.Debt.Ratio[76:88], "norm")
+ks.norm= ks.test(T.Debt.Ratio[76:88], "pnorm", mean=norm.fit$estimate[1], sd=norm.fit$estimate[2])
+c(ks.norm$statistic, P.Value=ks.norm$p.value)
+```
+
+---
+
+###  Check relationshop between external debt ratio and total debt ratio in cluster 2 group
+
+```{r}
+x2 = F.Debt.Ratio[76:88]
+y2 = T.Debt.Ratio[76:88]
+z2 = T.Debt.Ratio[76:88]-F.Debt.Ratio[76:88]
+# external and total
+plot(x2, y2, xlab="External Debt Ratio", ylab ="Total Debt Ratio", col='blue')
+abline(h=0.1,col='red')
+
+#check rank
+plot(rank(x2), rank(y2))
+```
+
+---
+### Further check bewteen external debt ratio and domestic debt ratio
+
+ Plot on cluster 2-External debt ratio and domestic debt ratio
+
+```{r}
+#External debt ratio and domestic debt ratio
+plot(x2, z2, xlab="External Debt Ratio", ylab ="Domestic Debt Ratio")
+
+```
+
+
+---
+## Capture your finding 
+
+### Timeline plot on two clusters output
+
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2, warn.conflicts=FALSE)
+
+time.clust=read.csv(file="C:/Temp/Debt/Time.Clusted.f.t.df.1.csv", header=TRUE, sep=",") 
+
+# Default countries based on timeline
+ggplot(time.clust, aes(x=Year, y=ClustNo, color=Country, shape=Region)) + geom_point(size=5) + ggtitle("Cluster Groups Based on Timeline ") + xlab("Year") + ylab("Cluster No.") + ylim (0, 4)  + theme(axis.text=element_text(size= 8, face='bold'), axis.title=element_text(size= 8,face="bold")) + theme(plot.title = element_text(size=8, face='bold')) + theme(legend.text=element_text(size=8, face='bold')) + theme(legend.title = element_text(size = 8, face = 'bold')) 
+```
+
+
+---
+
+### Number of default occurs for each country from two clusers
+```{r}
+#Frequencey of default countries 
+ggplot(time.clust, aes(x=Year, y=ClustNo, color=Country)) + geom_point() + facet_wrap(Region~Country) +ggtitle("Country & Region within Cluster group") + ylim(0,5) + theme(axis.text=element_text(size=12, face='bold'), axis.title=element_text(size=12,face="bold")) 
+```
+
+---
+
+### Domestic is overlooked - Domestic debt adjusted by inflation over 10 years
+
+```{r}
+library(lattice)
+inf = read.csv(file="C:/Temp/Debt/Debt_Inflation.csv", header=TRUE, sep=",") 
+#head(inf)
+xyplot(debt.adj.inf ~ year.a.d |id, data = inf, type="l", subset=(id < 29), strip=FALSE, xlab=" Ten Years", ylab = "Debt Adjuste Inf", main="Debt Adjusted by Inflation over Ten Years")
+
+```
